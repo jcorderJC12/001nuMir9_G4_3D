@@ -112,9 +112,9 @@ MAT_A$DE2<- paste(MAT_A$DE,MAT_A$M9,sep="_")
 #MAT_A1<- subset(MAT_A,DE=="01GAIN" | DE=="02LOSS")
 
 P11t<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
-print(P11t)
+#print(P11t)
 P11t2<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "fixed") +theme_classic()+ scale_color_manual(name=CELL,values=CO1)+theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks =c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
-print(P11t2)
+#print(P11t2)
 arrange1t <- ggarrange(P11t, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
 arrange12t <- ggarrange(P11t2, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
 pdf(file=paste(PORT,PROJECT,"_ORI_f_NGSPLOT",".pdf",sep=""),width=4 , height=15)  
@@ -122,8 +122,14 @@ print(arrange1t)
 print(arrange12t)            
 dev.off()
  
-print(arrange12t)  
-print(arrange1t) 
+
+```
+
+
+```{r,fig.dim = c(8, 15), results="asis", align='center',out.width="150%", echo=F}
+
+print(arrange1t)  
+
 ```
 
 ## Select those samples of Interest
@@ -133,7 +139,6 @@ print(arrange1t)
 
 P11t2CH<- ggplot(mat_RPKM1_5_c, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~HM+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste("01SE" ,"_Free_Y_scale",sep="" ) , x=XL, y = YL) 
 
-print(P11t2CH)
 pdf(file=paste(PORT,"003_",PROJECT, "_CHECK_forP_SE_TY",".pdf",sep=""), width=7, height=20)  
 print(P11t2CH)
 
@@ -270,6 +275,7 @@ L=-1
 M=1
 MI=7
 downcol2<- "lightgrey"
+upcol2<- "#01665e"
 CC= c(downcol2, "#F7F7F7",upcol2)
 library(ComplexHeatmap)
 library(circlize)
