@@ -1,5 +1,5 @@
 ---
-title: "007Mir9_ChIRP_G4_MED1_K27ac_ALL_GREEN_mer"
+title: "01Fig6A_Alluvial_Mir9_G4_K27_Med1"
 output: html_document
 ---
 
@@ -54,12 +54,12 @@ LOGD2=-0.32
 LOGU2=0.32
 AA<- "../fromR_Allu_enh"
 dir.create(AA)
-PORT="../fromR_Allu_enh/007Mir9_ChIRP_G4_MED1_K27ac_ALL_GREEN_mer/"
-PORT1="../fromR_Allu_enh/007Mir9_ChIRP_G4_MED1_K27ac_ALL_GREEN_mer/"
+PORT="../fromR_Allu_enh/01Fig6A_Alluvial_Mir9_G4_K27_Med1/"
+PORT1="../fromR_Allu_enh/01Fig6A_Alluvial_Mir9_G4_K27_Med1/"
 dir.create(PORT1)
 #install.packages('DelayedArray', dep = TRUE)
-PROJECT="007Mir9_ChIRP_G4_MED1_K27ac_ALL_GREEN_mer"
-PROJECT2="007Mir9_ChIRP_G4_MED1_K27ac_ALL_GREEN_mer"
+PROJECT="01Fig6A_Alluvial_Mir9_G4_K27_Med1"
+PROJECT2="01Fig6A_Alluvial_Mir9_G4_K27_Med1"
 PROJECT3="Mir9_ChIRP_P1e3_ds_RMDvs_MED1_Smarca5_ALL_mm10_ALLDOWN"
 PROJECT4="Mir9_ChIRP_P1e3_ds_RMDvs_MED1_Smarca5_ALL_mm10_ALLUP"
 
