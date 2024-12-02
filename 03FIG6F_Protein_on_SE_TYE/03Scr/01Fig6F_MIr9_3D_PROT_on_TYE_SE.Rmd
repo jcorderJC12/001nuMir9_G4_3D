@@ -1,9 +1,35 @@
 ---
 title: "01Fig6F_MIr9_3D_PROT_on_TYE_SE"
-author: "JC"
-date: "02/12/2024"
-output: html_document
+author:
+- name:  Dr. Julio Domingo Cordero Henriquez
+  affiliation: 
+  - Department of Cardiovascular Genomics and Epigenomics, European Center for Angioscience (ECAS), Medical Faculty Mannheim, Heidelberg University, Mannheim, Germany
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  % \VignetteIndexEntry{01Script: }
+  % \VignetteEngine{knitr::rmarkdown}
 ---
+```{r style, echo = FALSE, results = 'asis'}
+BiocStyle::markdown()
+```
+
+
+Mailto: julio.cordero@medma.uni-heidelberg.de<br />
+
+# **Objective**
+-To generate a heatmap from Proteins ChiP-seq on Mir9 marked and no-Mir9 areas.<br />
+## Input matrix is the Quantification of normalized Tag libraries on the different H3K27ac areas divided by Mir9.<br />
+
+
+
+
+# Summary of figures produced by this script.
+```{r,fig.dim = c(13, 8), results="asis", align='center',out.width="150%", echo=F}
+library(knitr)
+#knitr::include_graphics("./BROAD_SUMMA_H3K4me3.png")
+```   
 
 ```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 library(ggplot2)
@@ -11,7 +37,7 @@ library(tidyr)
 library(ggpubr)
 workdir = "./"
 setwd(workdir)
-PTHA="../02formR/"
+PTHA="../01OUT/"
 dir.create(PTHA)
 
 PROJECT="01Fig6F_MIr9_3D_PROT_on_TYE_SE"
@@ -41,19 +67,19 @@ options(future.globals.maxSize = 100000 * 1024^2)
 
 library(openxlsx)
 library(readxl)
-MAT_A = read_excel("../02formR/05d100pe3MLg_SE_TYE_M3_d200_001_A2/00_05d100pe3MLg_SE_TYE_M3_d200_001_A2_MAT_fPLOTs_SE.xlsx")
+MAT_A = read_excel("../00INPUT/01forHeatmap_Processed_Matrix_aAnnotatepeaks_pl_fPROTEINS.xlsx")
 ```
 
 
 ## Check the Samples in the matrix
 ```{r}
 table(MAT_A$Sample)
-table(MAT_A$Sample)
 
+mat_RPKM1_5_c <- subset(MAT_A,  TSS>=170 & TSS <= 230)
 
 ```
 
-## MAKE ORIGINAL plort calculated  from NGSPLOT Without Smoothng the line
+## MAKE ORIGINAL plort calculated  from AnnonatePeaks.pl from homer
 
 ```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 
@@ -85,13 +111,13 @@ NAME_IP<- c("aCtr","bKO")
 MAT_A$DE2<- paste(MAT_A$DE,MAT_A$M9,sep="_")
 #MAT_A1<- subset(MAT_A,DE=="01GAIN" | DE=="02LOSS")
 
-P11t<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~HM+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
+P11t<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
 print(P11t)
-P11t2<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~HM+DE, ncol =2,strip.position="top",scales = "fixed") +theme_classic()+ scale_color_manual(name=CELL,values=CO1)+theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks =c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
+P11t2<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "fixed") +theme_classic()+ scale_color_manual(name=CELL,values=CO1)+theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks =c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
 print(P11t2)
 arrange1t <- ggarrange(P11t, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
 arrange12t <- ggarrange(P11t2, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
-pdf(file=paste(PORT,PROJECT,"_ORI_f_NGSPLOT",".pdf",sep=""),width=4 , height=35)  
+pdf(file=paste(PORT,PROJECT,"_ORI_f_NGSPLOT",".pdf",sep=""),width=4 , height=15)  
 print(arrange1t) 
 print(arrange12t)            
 dev.off()
@@ -100,23 +126,11 @@ print(arrange12t)
 print(arrange1t) 
 ```
 
-
-
-
-
 ## Select those samples of Interest
-```{r}
+## MAKE ORIGINAL plort calculated  from AnnonatePeaks.pl from homer
 
-SAMPLES_to_PLOtS<- data.frame(c("H3K27ac_Ctr", "EP300_endo", "SMARCA1_WT","Rad21_r12","SMARCA4_WT",    
-                                "Med1_SRR1519931","Klf4_endo","Smad3_SRR064924","Hdac1_SRR5077718", "Hdac2_SRR675","SMARCA5_wt" ,"CHD4_wt"))
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 
-SAMPLES_to_PLOtS2<- c("H3K27ac_Ctr", "EP300_endo", "SMARCA1_WT","Rad21_r12","SMARCA4_WT",     "Med1_SRR1519931","Klf4_endo","Smad3_SRR064924","Hdac1_SRR5077718", "Hdac2_SRR675","SMARCA5_wt","CHD4_wt")
-
-colnames(SAMPLES_to_PLOtS)<- "Sample"
-
-TTEMP<- merge(SAMPLES_to_PLOtS,MAT_A,by="Sample")
-table(TTEMP$Sample)
-mat_RPKM1_5_c <- subset(TTEMP,  TSS>=170 & TSS <= 230)
 P11t2CH<- ggplot(mat_RPKM1_5_c, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~HM+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste("01SE" ,"_Free_Y_scale",sep="" ) , x=XL, y = YL) 
 
 print(P11t2CH)
@@ -125,33 +139,19 @@ print(P11t2CH)
 
 dev.off()
 
-#c1<-  ggplot(stat.test6, aes(factor(COMBI), log10p, fill = factor(COMBI))) +  geom_bar(position = "stack",stat = "identity") + guides(fill = guide_legend(reverse = F)) +labs(fill = "clu") + theme_bw() + scale_fill_manual(values =COeP)  +  theme(plot.title= element_text(color=BASIC_COL, size=LE, face="bold"), axis.text.y= element_text(size=LE,face="bold"),axis.text.x = element_text(size=SI, face="bold",angle=-90,h=0), axis.title.x =element_text(color=BASIC_COL, size=LE, face="bold"), axis.title.y = element_text(color=BASIC_COL, size=LE, face="bold"), panel.border = element_rect(colour = BASIC_COL, fill=NA, size=1))+ labs(title=paste(PROJECT,TRY,sep="_" ) , x=XL2, y = YL2)+coord_flip()
-#print(c1)
-#YL3<- "log10 adjuested Pvalue t_test"
-
- # stat.test6$COMBI<- factor(stat.test6$COMBI, levels =unique(stat.test6$COMBI[order(stat.test6$log10fdr,decreasing=F)]))
-#c11<-  ggplot(stat.test6, aes(factor(COMBI), log10fdr, fill = factor(COMBI))) +  geom_bar(position = "stack",stat = "identity") + guides(fill = guide_legend(reverse = F)) +labs(fill = "clu") + theme_bw() + scale_fill_manual(values =COeP)  +  theme(plot.title= element_text(color=BASIC_COL, size=LE, face="bold"), axis.text.y= element_text(size=LE,face="bold"),axis.text.x = element_text(size=SI, face="bold",angle=-90,h=0), axis.title.x =element_text(color=BASIC_COL, size=LE, face="bold"), axis.title.y = element_text(color=BASIC_COL, size=LE, face="bold"), panel.border = element_rect(colour = BASIC_COL, fill=NA, size=1))+ labs(title=paste(PROJECT,TRY,sep="_" ) , x=XL2, y = YL3)+coord_flip()
-#print(c11)
-#arrangeBAR1 <- ggarrange(c1, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="none")
-#arrangeBAR2 <- ggarrange(c11, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="none")
-   
-#pdf(file=paste(PORT,"003_",PROJECT, "_PATH_BAR_PVALUE",".pdf",sep=""), width=5, height=4)  
-#print(arrangeBAR1)
-#print(arrangeBAR2)
-#dev.off()
 
 ```
 
 ##  Calculate the Pvalue per combination
-```{r}
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 library(rstatix)
 library(ggpubr)
 stat.test5 <- mat_RPKM1_5_c %>%
   group_by(Sample,DE) %>%
-    t_test(RPMM2 ~ M9) %>%
+    wilcox_test(RPMM2 ~ M9) %>%
   adjust_pvalue(method = "fdr") %>%
   add_significance("p.adj")
-stat.test5
+
 stat.test5 <- stat.test5 %>%
   add_xy_position(x = "Sample", dodge = 0.8)
 YPOS5<- as.numeric((stat.test5$y.position )/3)
@@ -164,8 +164,7 @@ stat.test6$COMBI2<- paste(stat.test6$Sample,stat.test6$DE,sep="_")
 library(openxlsx)
 write.xlsx(stat.test6,file=paste(PORT,"00", "_",PROJECT, "_Pvalues.xlsx",sep=""),overwrite = T)
 
-
- stat.test6$COMBI<- factor(stat.test6$COMBI, levels =unique(stat.test6$COMBI[order(stat.test6$log10p,decreasing=F)]))
+stat.test6$COMBI<- factor(stat.test6$COMBI, levels =unique(stat.test6$COMBI[order(stat.test6$log10p,decreasing=F)]))
  COeP<- c("#888888","#CC79A7","#44AA99",  "#FB9A99",  "#6699CC", "#7570B3", "#01665e","#ff686b","#E7298A","#D4868A","#FDBF6F",    '#1965B0',"#C8E4EB","#332288", "#f4cae4", "#E6C5A6", "#44AA99", "#999933","#B15928", "#1F78B4", "#B2DF8A", "#33A02C", "#FF7F00" ,"#E4A2AC","#666666","#77ddcc","#E2A08D", "#B8BCDA","#abd9e9") 
  XL2="pathway"
 YL2<- "log10 Pvalue t_test"
@@ -174,10 +173,9 @@ LE=5
 ```
 
 
-## Prepare matrix to make the Dotplot
+## Prepare matrix to make the Heatmap 
 ```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 
-head(stat.test6)
 mat_RPKM1_5_c$COMBI<- paste(mat_RPKM1_5_c$Sample,mat_RPKM1_5_c$HM,mat_RPKM1_5_c$M9,sep="_")
 
   mat_RPKM1_5_c$COMBI2<- paste(mat_RPKM1_5_c$Sample,mat_RPKM1_5_c$DE,sep="_")
@@ -230,7 +228,8 @@ resdk4m3_25_Z<- cbind(resdk4m3_25,mat_esc_TMM_filter_heat)
 
 ## Multiply the zScore by the mean of enrichment
 
-```{r}
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+
 mat_RPKM1_5_c$DE3<- paste(mat_RPKM1_5_c$DE,mat_RPKM1_5_c$M9,sep="")
 mat_RPKM1_5_c$COMBI3<- paste(mat_RPKM1_5_c$DE,mat_RPKM1_5_c$COMBI,sep="")
 
@@ -263,7 +262,8 @@ df7<- merge(df6,resdk4m3_P,by="Sample")
 ```
 
 
-## show as heatmap
+## Perform Heatmap.
+- Values are normalized zscore from the Enrichment of the Protein on the different genomic areas.
 ```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 
 L=-1
@@ -296,35 +296,26 @@ h<-rowAnnotation(df =data.frame(GR),
                                     "4"="gold","5" ="magenta","6" ="tomato1", "7"="steelblue2",
                                    "8"="black"
                                     )))
-df5<- df5[order(df5$Clu,decreasing=F),]
-#df5$Sample = factor(df5$Sample, levels=rev(SAMPLES_to_PLOtS2))
+#df5<- df5[order(df5$Clu,decreasing=F),]
+#df5$Sample
+SAMPLES_to_PLOtS22<- c("Med1_SRR1519931","Klf4_SRR5077676","Hdac1_SRR5077718", "SMARCA5_SRR1057294","Smad3_SRR064924","H3K27ac_SRR5077641", "Hdac2_SRR6756859","CHD4_SRR1057290","SMARCA4_SRR2133580","EP300_SRR5077714", "SMARCA1_SRR2133579","Rad21_SRR683357")
+df5$Sample = factor(df5$Sample, levels=(SAMPLES_to_PLOtS22))
 HAT= "Enrich of H3k27ac Prot +/- M9"
 
-  Hesc_TMM_filter<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = T,cluster_rows = T, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
+  Hesc_TMM_filter<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = F,cluster_rows = F, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
     column_title = HAT)
  
   draw(Hesc_TMM_filter, heatmap_legend_side = "left", annotation_legend_side = "left", merge_legend = TRUE)
 
-  Hesc_TMM_filter2<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns =F,cluster_rows = F, col=colorRamp2(c(L, 0, M), CC),left_annotation = h, show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
-    column_title = HAT)
-   draw(Hesc_TMM_filter2, heatmap_legend_side = "left", annotation_legend_side = "left",
-       merge_legend = TRUE)
-   Hesc_TMM_filter3<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = F,cluster_rows = T, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
+
+Hesc_TMM_filter3<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = F,cluster_rows = T, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
     column_title = HAT)
 draw(Hesc_TMM_filter3, heatmap_legend_side = "left", annotation_legend_side = "left",
        merge_legend = TRUE)
- Hesc_TMM_filter4<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns =T,cluster_rows = F, col=colorRamp2(c(L, 0, M), CC),left_annotation = h, show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
-    column_title = HAT)
-   draw(Hesc_TMM_filter2, heatmap_legend_side = "left", annotation_legend_side = "left",
-       merge_legend = TRUE)
-{ pdf(file=paste(PORT,PROJECT,"HEATP_2_11.pdf",sep=""), width=3.4, height=4) 
+{ pdf(file=paste(PORT,PROJECT,"HEATPMAP",".pdf",sep=""), width=3.4, height=4) 
   set.seed(1)
-   print(Hesc_TMM_filter)
-    draw(Hesc_TMM_filter2, heatmap_legend_side = "left", annotation_legend_side = "left",
-       merge_legend = TRUE)
      draw(Hesc_TMM_filter3, heatmap_legend_side = "left", annotation_legend_side = "left",
        merge_legend = TRUE)
-     print(Hesc_TMM_filter4)
 }
 dev.off()
 ```
