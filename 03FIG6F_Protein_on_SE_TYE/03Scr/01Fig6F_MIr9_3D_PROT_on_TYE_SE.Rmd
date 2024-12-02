@@ -269,6 +269,7 @@ df7<- merge(df6,resdk4m3_P,by="Sample")
 L=-1
 M=1
 MI=7
+downcol2<- "lightgrey"
 CC= c(downcol2, "#F7F7F7",upcol2)
 library(ComplexHeatmap)
 library(circlize)
