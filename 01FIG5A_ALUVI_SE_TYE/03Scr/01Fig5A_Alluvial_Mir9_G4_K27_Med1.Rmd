@@ -1,0 +1,146 @@
+---
+title: "01Fig5A_Alluvial_Mir9_G4_K27_Med1"
+author:
+- name:  Dr. Julio Domingo Cordero Henriquez
+  affiliation: 
+  - Department of Cardiovascular Genomics and Epigenomics, European Center for Angioscience (ECAS), Medical Faculty Mannheim, Heidelberg University, Mannheim, Germany
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  % \VignetteIndexEntry{01Script: }
+  % \VignetteEngine{knitr::rmarkdown}
+---
+```{r style, echo = FALSE, results = 'asis'}
+BiocStyle::markdown()
+```
+
+
+Mail to: julio.cordero@medma.uni-heidelberg.de<br />
+
+# **Objective**
+-To generate **Alluvial Plots** from the Annotated peaks list from Mir9-ChiRP-seq, G4-ChIP-seq, Med1-ChIP-seq and H3K27ac-ChIP-seq <br /><br />
+- Inputs are annotated peaks from homer annotatePeaks.pl (default).<br /><br />
+
+# Summary of figures produced by this script.
+```{r,fig.dim = c(13, 8), results="asis", align='center',out.width="150%", echo=F}
+library(knitr)
+#knitr::include_graphics("./BROAD_SUMMA_H3K4me3.png")
+```   
+
+## Programs to load in R
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+library(openxlsx)
+library(data.table)
+library(dplyr)
+library(doParallel)
+library(BiocParallel)
+library(gam)
+library(foreach)
+library(ggplot2)
+library("RcppArmadillo")
+library(DelayedArray)
+library(RColorBrewer)
+library(Rcpp)
+library(plyr)
+library(gplots)
+library(tidyr)
+library(circlize)
+library(ggalluvial)
+library(gridExtra)
+library(stringr)
+library(ggpubr)
+workdir = "./"
+setwd(workdir)
+AA<- "../01OUT"
+dir.create(AA)
+PROJECT="01Fig5A_Alluvial_Mir9_G4_K27_Med1"
+PORT1=paste(AA,"/",PROJECT,"/",sep="")
+dir.create(PORT1)
+```
+
+## Inport annotated Peak files
+- Inputs are annotated peaks from homer annotatePeaks.pl (default settings).<br /><br />
+
+
+```{r,class.source="bg-info",echo=TRUE,warning=T}
+WORK1 = "../00INPUT/"
+NAME_G2 <-data.frame(list.files(path=WORK1,pattern="*_annot"))
+NAME_G1 <-data.frame(list.files(path=WORK1,pattern="_annot",all.files = T,full.names = T, recursive = T))
+G2<- data.frame(str_split_fixed(NAME_G2[,1],"_", 5))
+```
+
+## Read the files
+ Files are read with read.delim in a loop. To create the variable SYMBOL which is the annotated gene to the ChIP-seq peak.<br />
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+resdk4m3_diff<- list()
+for(i in 1:length(G2$X1)) {
+#print(i)
+CC<- as.character(G2[i,1])
+mat_RPKM_F<- read.delim(NAME_G1[i,1],header=T)
+mat_RPKM_F$SYMBOL <- mat_RPKM_F$Gene.Name
+mat_RPKM_F$IP<- CC
+resdk4m3_diff[[i]]<- subset(mat_RPKM_F,select=c("SYMBOL","IP"))
+}
+GN5a<- do.call(rbind, resdk4m3_diff)
+```
+
+
+## Prepare the matrix for Alluvial
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+ALLu<- GN5a[!duplicated(GN5a[,c("SYMBOL","IP")]),]
+ALLu22<- GN5a[!duplicated(GN5a[,c("SYMBOL","IP")]),]
+ALLu$IP2<- paste(ALLu$SYMBOL,ALLu$IP,sep="_")
+ALLu$SYMBOL<- 1
+rownames(ALLu)<- ALLu$IP2
+MAT_AA4<- spread(ALLu,IP, SYMBOL,fill = 0)
+MAT_AA4_1<- MAT_AA4[5:nrow(MAT_AA4),]
+MAT_AA4_2<- data.frame(str_split_fixed(MAT_AA4_1$IP2,"_", 2))
+colnames(MAT_AA4_2)<- c("SYMBOL","IP")
+MAT_AA4_3<- cbind(MAT_AA4_2,MAT_AA4_1)
+MAT_AA4_4 <- aggregate(.~SYMBOL, MAT_AA4_3, max)
+NAME_SAM2<-as.character(t(G2$X1))
+MAT_AA4_5<- subset(MAT_AA4_4,select=c("SYMBOL",NAME_SAM2))
+NAME_SAM2<- c("X01Mir9","X02G4","X03MED1","X04k27ac")
+colnames(MAT_AA4_5)<- c("SYMBOL",NAME_SAM2)
+
+MA46c2<- plyr::count(MAT_AA4_5, NAME_SAM2)
+MA46c2_m9<- subset(MA46c2,X01Mir9==1 | X01Mir9==0 & X02G4==1)
+
+MA46c2$FC1[MA46c2$X01Mir9==0] <- "03M9_NO_TARG"
+MA46c2$FC1[MA46c2$X01Mir9==1 & MA46c2$X02G4==1] <- "01M9_G4_Targets"
+MA46c2$FC1[MA46c2$X01Mir9==1 & MA46c2$X02G4==0] <- "02M9_G4_NO_Targets"
+
+MA46c2$FC2[MA46c2$X01Mir9==0] <-"03M9_NO_TARG"
+MA46c2$FC2[MA46c2$X01Mir9==1 & MA46c2$X03MED1==1] <- "01M9_MED1_Targets"
+MA46c2$FC2[MA46c2$X01Mir9==1 & MA46c2$X03MED1==0] <- "02M9_MED1_NO_Targets"
+
+CO_ALU2=c("lightgrey","darkgreen","#542788")
+XL="IP samples"
+YL="N of genes"
+SI=10
+AL1<-ggplot(data = MA46c2, aes(y = freq, axis1 = X01Mir9, axis2 = X02G4, axis3 = X03MED1, axis4 = X04k27ac))+geom_alluvium(aes(fill = X01Mir9),curve_type = "arctangent") +  geom_stratum(width = 1/4)+ geom_text(stat = "stratum", color="black" , size=1,   nudge_y=c(.1,.2,.3,.4,.5,0),aes(label = after_stat(stratum))) +scale_x_continuous(breaks = 1:4,labels = NAME_SAM2) +theme_void()
+AL1a<- AL1+labs(title=paste(PROJECT ,"ALL_COMBI",sep="_" ), x=XL, y = YL)+theme(plot.title = element_text(color="black", size=9, face="bold"),axis.text.x = element_text(color="black", size=SI, face="bold"),axis.text.y = element_text(color="#993333", size=SI, face="bold"))+guides(fill =guide_legend(title = "Mir9"))+scale_fill_manual(values=CO_ALU2)
+
+arrange1b <- ggarrange(AL1a, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+```
+
+# Plot the Alluvial
+- The **0** means, genes were not marked by Mir9 and **1** means marked genes by Mir9<br />
+```{r,fig.dim = c(6, 4),class.source="bg-info"}
+print(arrange1b)
+```
+
+### Print pdf from Alluvial
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+pdf(file=paste(PORT1, "00_",PROJECT,"_ALLU",".pdf",sep=""), width=6, height=4) 
+  set.seed(1)
+print(arrange1b)
+dev.off()
+```
+
+### Export the excel matrix file
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+write.xlsx(MA46c2,file=paste(PORT1,"00_",PROJECT,"_fAlluvial.xlsx",sep=""))
+```
+

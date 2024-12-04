@@ -1,0 +1,303 @@
+---
+title: "01Fig5F_MIr9_3D_PROT_on_TYE_SE"
+author:
+- name:  Dr. Julio Domingo Cordero Henriquez
+  affiliation: 
+  - Department of Cardiovascular Genomics and Epigenomics, European Center for Angioscience (ECAS), Medical Faculty Mannheim, Heidelberg University, Mannheim, Germany
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  % \VignetteIndexEntry{01Script: }
+  % \VignetteEngine{knitr::rmarkdown}
+---
+```{r style, echo = FALSE, results = 'asis'}
+BiocStyle::markdown()
+```
+
+
+Mailto: julio.cordero@medma.uni-heidelberg.de<br />
+
+# **Objective**
+-To generate a heatmap from Proteins ChiP-seq on Mir9 marked and no-Mir9 areas.<br />
+## Input matrix is the Quantification of normalized Tag libraries on the different H3K27ac areas divided by Mir9.<br />
+
+
+
+
+# Summary of figures produced by this script.
+```{r,fig.dim = c(13, 8), results="asis", align='center',out.width="150%", echo=F}
+library(knitr)
+#knitr::include_graphics("./BROAD_SUMMA_H3K4me3.png")
+```   
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+library(ggplot2)
+library(tidyr)
+library(ggpubr)
+library(RColorBrewer)
+library(utils)
+library(gridExtra)
+library(future)
+library(openxlsx)
+library(readxl)
+library(rstatix)
+library(ggpubr)
+library(plyr)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+
+workdir = "./"
+setwd(workdir)
+PTHA="../01OUT/"
+dir.create(PTHA)
+
+PROJECT="01Fig5F_MIr9_3D_PROT_on_TYE_SE"
+PORT=paste(PTHA,PROJECT,"/",sep="")
+dir.create(PORT)
+```
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=F}
+#plan("multicore", workers = 16)
+#?plan()
+plan("sequential", workers = 16)
+options(future.globals.maxSize = 100000 * 1024^2)
+#availableCores()
+```
+
+
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=F}
+MAT_A = read_excel("../00INPUT/01forHeatmap_Processed_Matrix_aAnnotatepeaks_pl_fPROTEINS.xlsx")
+```
+
+
+## Check the Samples in the matrix
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=F}
+
+table(MAT_A$Sample)
+
+mat_RPKM1_5_c <- subset(MAT_A,  TSS>=170 & TSS <= 230)
+
+```
+
+## Perform the plot calculated  from AnnonatePeaks.pl from homer
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+MM1=0.4
+LE=9
+SI=10
+YL="RRPM"
+XL="dis from center of Enhancer"
+CELL="IP"
+NAME1<- data.frame(colnames(MAT_A))
+upcol<- "#B2182B" # magenta from PiyG
+nc<- "#000000" # black
+BASIC_COL=nc
+#downcol<- "#7fbc41" # green from PiyG
+downcol<- "#2166AC" # green from PiyG
+CO1<- c("#44AA99","darkgrey", "#FB9A99","#B452CD" ,  "#000000",upcol,"#999933","#CC79A7",downcol,"grey")
+BOR=0.3
+CO<-brewer.pal(n = 12, name = "Paired")
+A1<- "-2"
+A2<- "0"
+A3<- "end"
+A4<- "2kB"
+par(lwd=3)
+NAME_IP<- c("aCtr","bKO")
+MAT_A$DE2<- paste(MAT_A$DE,MAT_A$M9,sep="_")
+
+P11t<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
+#print(P11t)
+P11t2<- ggplot(MAT_A, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~Sample+DE, ncol =2,strip.position="top",scales = "fixed") +theme_classic()+ scale_color_manual(name=CELL,values=CO1)+theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks =c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste(PROJECT,"_Fixed_Y_scale",sep="" ) , x=XL, y = YL) 
+#print(P11t2)
+arrange1t <- ggarrange(P11t, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+arrange12t <- ggarrange(P11t2, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+pdf(file=paste(PORT,PROJECT,"_ORI_f_NGSPLOT",".pdf",sep=""),width=4 , height=15)  
+print(arrange1t) 
+print(arrange12t)            
+dev.off()
+```
+
+
+```{r,fig.dim = c(8, 15), results="asis", align='center',out.width="150%", echo=F}
+print(arrange1t)  
+```
+
+## Check the area from the genome area
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+P11t2CH<- ggplot(mat_RPKM1_5_c, aes(x=TSS, y=RPMM2, group= as.factor(M9),colour=as.factor(M9))) +geom_line(size=0.5)+  facet_wrap(~HM+DE, ncol =2,strip.position="top",scales = "free")  + scale_color_manual(name="DE",values=CO1) +theme_classic()+  theme(axis.text.y   = element_text(size=LE,angle = 0, face="bold"),legend.position = "rigt",panel.border = element_rect(colour = "black", fill=NA, size=BOR),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.title.x  =element_text(angle = 0,size=SI , face="bold"),axis.title.y = element_text(angle = 90,size=SI , face="bold"),strip.text.y.left = element_text(angle = 0,size=10 , face="bold")) +  scale_x_continuous(breaks = c(1,200, 401), labels = c(A1,A2,A4))+ labs(title=paste("01SE" ,"_Free_Y_scale",sep="" ) , x=XL, y = YL) 
+
+pdf(file=paste(PORT,"003_",PROJECT, "_CHECK_forP_SE_TY",".pdf",sep=""), width=7, height=20)  
+print(P11t2CH)
+dev.off()
+```
+
+##  Calculate the Pvalue per combination
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+stat.test5 <- mat_RPKM1_5_c %>%
+  group_by(Sample,DE) %>%
+    wilcox_test(RPMM2 ~ M9) %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_significance("p.adj")
+
+stat.test5 <- stat.test5 %>%
+  add_xy_position(x = "Sample", dodge = 0.8)
+YPOS5<- as.numeric((stat.test5$y.position )/3)
+SI=10  
+stat.test6<- stat.test5
+stat.test6$log10p<- log10(stat.test6$p)*(-1)
+stat.test6$log10fdr<- log10(stat.test6$p.adj)*(-1)
+stat.test6$COMBI<- paste(stat.test6$Sample,stat.test6$DE,stat.test6$group1,stat.test6$group2,sep="_")
+stat.test6$COMBI2<- paste(stat.test6$Sample,stat.test6$DE,sep="_")
+
+write.xlsx(stat.test6,file=paste(PORT,"00", "_",PROJECT, "_Pvalues.xlsx",sep=""),overwrite = T)
+
+stat.test6$COMBI<- factor(stat.test6$COMBI, levels =unique(stat.test6$COMBI[order(stat.test6$log10p,decreasing=F)]))
+ COeP<- c("#888888","#CC79A7","#44AA99",  "#FB9A99",  "#6699CC", "#7570B3", "#01665e","#ff686b","#E7298A","#D4868A","#FDBF6F",    '#1965B0',"#C8E4EB","#332288", "#f4cae4", "#E6C5A6", "#44AA99", "#999933","#B15928", "#1F78B4", "#B2DF8A", "#33A02C", "#FF7F00" ,"#E4A2AC","#666666","#77ddcc","#E2A08D", "#B8BCDA","#abd9e9") 
+ XL2="pathway"
+YL2<- "log10 Pvalue t_test"
+TRY=" Log10_from_ngsplot_TSS_30_to_68"
+LE=5
+```
+
+## Prepare matrix to make the Heatmap 
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+mat_RPKM1_5_c$COMBI<- paste(mat_RPKM1_5_c$Sample,mat_RPKM1_5_c$HM,mat_RPKM1_5_c$M9,sep="_")
+
+mat_RPKM1_5_c$COMBI2<- paste(mat_RPKM1_5_c$Sample,mat_RPKM1_5_c$DE,sep="_")
+mat_RPKM1_5_c$Sample2<- paste(mat_RPKM1_5_c$Sample,mat_RPKM1_5_c$TSS,sep="_")
+  
+mat_RPKM1_5_c2<- subset(mat_RPKM1_5_c,select=c("Sample","TSS", "COMBI2","RPMM2"))
+MAT_AA3<- merge(mat_RPKM1_5_c2,stat.test6,by="COMBI2")
+
+data_summary2 <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- plyr::rename(data_sum, c("mean" = varname))
+  return(data_sum)}
+#######################################
+
+df2 <- data_summary2(mat_RPKM1_5_c, varname="RPMM2", groupnames=c("COMBI"))
+
+mat_RPKM1_5_c3<- subset(mat_RPKM1_5_c,select=c("Sample2", "COMBI"))
+
+df2<- subset(df2,select=c("COMBI","RPMM2"))
+colnames(df2)<- c("COMBI","meanRPMM2")
+mat_RPKM1_5_c3<- subset(mat_RPKM1_5_c,select=c("Sample2","COMBI","M9","COMBI2"))
+mat_RPKM1_5_c4<- merge(df2,mat_RPKM1_5_c3,by="COMBI")
+
+df3<- spread(mat_RPKM1_5_c4[,2:5],M9,meanRPMM2,fill=0)
+df3$log2inM_nM9<- log2(df3$inMir9/df3$nMir9)
+
+stat.test6$COMBI2<- paste(stat.test6$Sample,stat.test6$DE,sep="_")
+MAT_AA3<- merge(df3,stat.test6,by="COMBI2")
+
+stat.test6_2<- stat.test6[,4:ncol(stat.test6)]
+resdk4m3_25 <- list(mat_RPKM1_5_c,df3,stat.test6_2) %>%
+  Reduce(function(dtf1,dtf2) inner_join(dtf1,dtf2,by="COMBI2"), .)
+
+NAME_M9<- c("inMir9","nMir9")
+NAME_M9z<-c("zinMir9","znMir9") 
+mat_esc_TMM_filter_heat = data.frame(t(scale(t(resdk4m3_25[,NAME_M9]))))
+colnames(mat_esc_TMM_filter_heat)<-NAME_M9z 
+resdk4m3_25_Z<- cbind(resdk4m3_25,mat_esc_TMM_filter_heat)
+
+```
+
+
+## Multiply the zScore by the mean of enrichment
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+mat_RPKM1_5_c$DE3<- paste(mat_RPKM1_5_c$DE,mat_RPKM1_5_c$M9,sep="")
+mat_RPKM1_5_c$COMBI3<- paste(mat_RPKM1_5_c$DE,mat_RPKM1_5_c$COMBI,sep="")
+
+mat_RPKM1_5_c_mean<- mat_RPKM1_5_c %>% 
+  group_by(Clu) %>% 
+  dplyr::summarise(mean_RPMM2 = mean(RPMM2, na.rm = TRUE))
+mat_RPKM1_5_c_mean2<- merge(mat_RPKM1_5_c_mean,mat_RPKM1_5_c,by="Clu")
+
+
+resdk4m3_25mean <- list(mat_RPKM1_5_c_mean2,stat.test6_2) %>%
+  Reduce(function(dtf1,dtf2) inner_join(dtf1,dtf2,by="COMBI2"), .)
+#,  Sample=="H3K27ac_Ctr" | Sample=="EP300_endo"
+resdk4m3_25mean2<- subset(resdk4m3_25mean,select=c("COMBI3", "DE3", "Sample","mean_RPMM2" ))
+resdk4m3_25mean2u <-resdk4m3_25mean2[!duplicated(resdk4m3_25mean2[,c("COMBI3")]),]
+
+
+df4<- spread(resdk4m3_25mean2u[,2:4],DE3,mean_RPMM2,fill=0)
+NAME_zD3<- paste("z",colnames(df4[,2:5]),sep="")
+mat_esc_TMM_filter_heat = data.frame(t(scale(t(df4[,2:5]))))
+colnames(mat_esc_TMM_filter_heat)<- NAME_zD3
+df5<- cbind(df4,mat_esc_TMM_filter_heat)
+df5<- subset(df5, select=c( "Sample",NAME_zD3 ))
+df6 <- gather(df5, NAME_zD3, key="Sample2",value= "zmeanRPKM2")
+
+resdk4m3_P<- subset(resdk4m3_25mean,select=c( "Sample","log10fdr","log10p","DE" ))
+
+df7<- merge(df6,resdk4m3_P,by="Sample")
+```
+
+
+## Perform Heatmap
+- Values are normalized z-score from the enrichment of the proteins on the different genomic areas.
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+L=-1
+M=1
+MI=7
+downcol2<- "lightgrey"
+upcol2<- "#01665e"
+CC= c(downcol2, "#F7F7F7",upcol2)
+
+IMPORT=column_order = order(as.numeric(gsub("column", "", colnames(df5[,NAME_zD3]))))
+
+rownames(df5)<- df5$Sample
+SI=6
+set.seed(1)
+clusters <- kmeans(df5[,NAME_zD3],MI,iter.max=500,algorithm = "Hartigan-Wong") 
+set.seed(1)
+clusters2 <- kmeans(df5[,NAME_zD3],MI,iter.max=500,algorithm = "Hartigan-Wong")
+
+identical(clusters,clusters2)
+df5$Clu <- as.factor(clusters$cluster)
+#str(clusters2)
+#str(clusters)
+GR<- df5$Clu
+ 
+h<-rowAnnotation(df =data.frame(GR), 
+                 col = list(GR = c("1" =  "#8c510a","2" = "darkgreen",  "3"="cyan",                                    "4"="gold","5" ="magenta","6" ="tomato1", "7"="steelblue2",
+                                   "8"="black")))
+SAMPLES_to_PLOtS22<- c("Med1_SRR1519931","Klf4_SRR5077676","Hdac1_SRR5077718", "SMARCA5_SRR1057294","Smad3_SRR064924","H3K27ac_SRR5077641", "Hdac2_SRR6756859","CHD4_SRR1057290","SMARCA4_SRR2133580","EP300_SRR5077714", "SMARCA1_SRR2133579","Rad21_SRR683357")
+df5$Sample = factor(df5$Sample, levels=(SAMPLES_to_PLOtS22))
+HAT= "Enrich of H3k27ac Prot +/- M9"
+
+Hesc_TMM_filter<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = F,cluster_rows = F, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
+    column_title = HAT)
+ 
+draw(Hesc_TMM_filter, heatmap_legend_side = "left", annotation_legend_side = "left", merge_legend = TRUE)
+
+Hesc_TMM_filter3<- Heatmap(df5[,NAME_zD3] , name="zcore", cluster_columns = F,cluster_rows = T, col=colorRamp2(c(L, 0, M), CC), show_row_names = T,  row_names_gp = gpar(fontsize = SI),  show_column_names = T,column_order = IMPORT,rect_gp = gpar(col = "white", lwd = 2),
+    column_title = HAT)
+
+draw(Hesc_TMM_filter3, heatmap_legend_side = "left", annotation_legend_side = "left",
+       merge_legend = TRUE)
+```
+
+
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+pdf(file=paste(PORT,PROJECT,"HEATPMAP",".pdf",sep=""), width=3.4, height=4) 
+set.seed(1)
+draw(Hesc_TMM_filter3, heatmap_legend_side = "left", annotation_legend_side = "left",
+       merge_legend = TRUE)
+
+dev.off()
+write.xlsx(df5,file=paste(PORT,"00", "_",PROJECT, "_fHEATMAP.xlsx",sep=""),overwrite = T)
+
+```
+

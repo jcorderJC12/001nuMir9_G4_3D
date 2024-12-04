@@ -1,0 +1,407 @@
+---
+title: "02FIG5D_5G_aROSE_K27ac"
+author:
+- name:  Dr. Julio Domingo Cordero Henriquez
+  affiliation: 
+  - Department of Cardiovascular Genomics and Epigenomics, European Center for Angioscience (ECAS), Medical Faculty Mannheim, Heidelberg University, Mannheim, Germany<br />
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  % \VignetteIndexEntry{01Script: }
+  % \VignetteEngine{knitr::rmarkdown}
+---
+```{r style, echo = FALSE, results = 'asis'}
+BiocStyle::markdown()
+```
+
+Mail to: julio.cordero@medma.uni-heidelberg.de<br />
+
+# **Objective**
+-To generate **Hockey stick plot** after analysis using the ROSE algorithm and showing distribution of normalized H3K27ac CUT&Tag signal across typical enhancers (TYE) and super-enhancers (SE) i<br /><br />
+
+-To generate **Barplot by Enhancer ** from H3K27ac peaks <br /><br />
+
+# Summary of figures produced by this script.
+```{r,fig.dim = c(13, 8), results="asis", align='center',out.width="150%", echo=F}
+
+#knitr::include_graphics("./BROAD_SUMMA_H3K4me3.png")
+```   
+
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
+library(openxlsx)
+library(data.table)
+library(edgeR)
+library(readxl)
+library(doParallel)
+library(BiocParallel)
+library(gam)
+library(foreach)
+library(ggplot2)
+library(RcppArmadillo)
+library(RColorBrewer)
+library(Rcpp)
+library(clusterProfiler)
+library(plyr)
+library(gplots)
+library(EnrichedHeatmap)
+library(ComplexHeatmap)
+library(tidyr)
+library(circlize)
+library(stringr)
+library(purrr)
+library(dplyr)                                    # Load dplyr package
+library(readr)  
+library(rstatix)
+library(ggpubr)
+library(Hmisc)
+ library(ggforce)
+library(future)
+library(knitr)
+```
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=F}
+plan("sequential", workers = 16)
+```
+
+
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=F}
+workdir = "./"
+setwd(workdir)
+
+PROJECT="02FIG5D_5G_aROSE_K27ac"
+PTHA11="../01OUT/"
+dir.create(PTHA11)
+PTHA=paste(PTHA11,PROJECT,"/",sep="")
+PORT=paste(PTHA11,PROJECT,"/",sep="")
+dir.create(PTHA)
+dir.create(PORT)
+PEAK1="01Ctr"
+PEAK2="02R20"
+
+meta2 = "../00INPUT/"
+mat_m1b = data.frame(list.files(path=paste(meta2,sep=""), pattern="*_aROSE_anno.bed", full.names=F))
+mat_m22 = data.frame(gsub("*_aROSE_anno.bed", "", mat_m1b[,1]))
+
+G4<- data.frame(str_split_fixed(mat_m22[,1],"_", 3))
+mat_m22$Sample<- paste(G4[,2],G4[,3],sep="_")
+```
+
+
+## Load annotated peaks from H3k27ac 
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+WORK2="../00INPUT/"
+mat_m1b1 = data.frame(list.files(path=paste(WORK2,sep=""), pattern="*_aROSE_anno.bed", full.names=T))
+DE_LIST<- list()
+DE_LIST2<- list()
+
+NAME_GN5<- c("ctr_RO","st_RO","en_RO","ID_RO","V5","RO_size","Normalized_Tag_Count","ID_RO2","isSE","ctr_p","st_p","en_p" ,"Gene.Name","Nearest.PromoterID","Annotation","Distance.to.TSS")
+for(i in 1:length(mat_m22$Sample)){
+ MO<- mat_m22[i,1]
+#print(MO)
+mat_1 = read.delim(mat_m1b1[i,1],header=F,sep="\t",dec=".")
+colnames(mat_1)<- NAME_GN5
+mat_1$CELL<- G4[i,1]
+mat_1$HM<- G4[i,2]
+mat_1$Sample<- G4[i,3]
+mat_1$ENH4[mat_1$isSE==1]<- "01SE"
+mat_1$ENH4[mat_1$isSE==0]<- "02TYE"
+DE_LIST2[[i]]<- mat_1
+}
+NAME_GBro<- c("ctr_RO","st_RO","en_RO",  "PEAK_ID")
+GN5ano<- do.call(rbind, DE_LIST2)
+GN5ano$PEAK_ID<- paste(GN5ano$ctr_RO,GN5ano$st_RO,GN5ano$en_RO,GN5ano$CELL,GN5ano$Sample,GN5ano$ENH4,GN5ano$Gene.Name,sep="_")
+GN5ano_u <-GN5ano[!duplicated(GN5ano[,c("PEAK_ID")]),]
+
+write.table(GN5ano,file=paste(PTHA,PROJECT,"_fromR.bed",sep=""),sep="\t",row.names = F,col.names=F,dec=".",quote = F)
+write.table(GN5ano,file=paste(PTHA,PROJECT,"_fromR_w_TITLE.txt",sep=""),sep="\t",row.names = F,col.names=T,dec=".",quote = F)
+```
+
+## Prepare files to Print for IGV
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+NAME_GBro2<- plyr::count(GN5ano,c("Sample"))
+NAME_GBro3<- plyr::count(GN5ano,c("ENH4"))
+
+DE_LIST2<- list()
+PORTi=paste(PTHA,"00PEAKS_Browser","/",sep="")
+dir.create(PORTi)
+for(i in 1:length(NAME_GBro2$Sample)){
+for(B in 1:length(NAME_GBro3$ENH4)){
+SA<- as.character(NAME_GBro2[i,"Sample"])
+ENH<- as.character(NAME_GBro3[B,"ENH4"])
+MO33<- paste("01MLgH3k27ac", SA,ENH,sep="_")
+# print(MO33) 
+DE_LIST2[[MO33]]<- subset(GN5ano,Sample==SA &ENH4==ENH,  select=c(NAME_GBro))
+write.table(DE_LIST2[[MO33]],file=paste(PORTi,MO33,"_fromRIGV.bed",sep=""),sep="\t",row.names = F,col.names=F,dec=".",quote = F)
+}}
+NAME_GBro4<- plyr::count(GN5ano,c("Sample","ENH4"))
+GN5ano_u1 <-GN5ano[!duplicated(GN5ano[,c("ID_RO","Sample")]),]
+MA6<- plyr::count(GN5ano_u1,c("Sample","ENH4"))
+```
+
+## Prepare the matrix to perform the Hockey stick plot
+```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
+NAME_SA<- plyr::count(GN5ano_u1,c("Sample"))
+
+df.list<- list()
+for(i in 1:length(NAME_SA$Sample)) {
+SA<- as.character(NAME_SA[i,1])
+df.list[[i]] <- subset(GN5ano_u1,Sample==SA )
+df.list[[i]] <- df.list[[i]][order(df.list[[i]]$Normalized_Tag_Count,decreasing=F),]
+df.list[[i]]$XLA<- 1:nrow(df.list[[i]])
+df.list[[i]]$ID <-NAME_SA[i,1]
+}
+GN5a<- do.call(rbind, df.list)
+CO22S<- c("darkgrey","#01665e","darkgreen","#f16913","#df65b0","#8c510a")
+```
+
+
+
+# Perform the Hockey stick plot <br />
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+### How prepare X axes numbers to give to the plot
+XL="Enhancer ranked by H3k27ac signal"
+YL="Peak distribut (%)"
+YL2="Norm H3k27ac signal"
+L1<- min(GN5a$XLA)
+L2<- round(max(GN5a$XLA)/2,digits = 0)
+L3<- round(max(GN5a$XLA)*0.75,digits = 0)
+L4<- round(max(GN5a$XLA),digits = 0)
+S4<- round(max(GN5a$Normalized_Tag_Count),digits = 0)
+S3<- S4/2
+LL=7
+Si=2
+MAX=10000
+
+BASIC_COL="black"
+SAM<- plyr::count(GN5a,c("ID"))
+GR<- plyr::count(GN5a,c("CELL"))
+GR1<- as.character(GR[1,1])
+
+F1<- ggplot(GN5a) + geom_line(aes(XLA,Normalized_Tag_Count, colour=ID),size=2) +  scale_color_manual(name=GR1,values=CO22S)+ylim(0,S3)+theme_bw() +
+    theme(strip.placement = "outside",strip.text.y.left =element_text(angle=0),axis.text.x=element_text(angle = 0,size=LL, face="bold"),panel.border = element_rect(colour = BASIC_COL,  size=Si),axis.text.y = element_text(size=LL, face="bold")) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)+scale_x_continuous(breaks = seq(0, 21000, by = 4000 ))
+# print(F1)
+F2<- ggplot(GN5a) + geom_line(aes(XLA,(Normalized_Tag_Count), colour=ID),size=2) +scale_color_manual(name=GR1,values=CO22S)+ theme_bw() + theme(strip.placement = "outside",strip.text.y.left = element_text(angle=0),axis.text.x=element_text(angle = 45,h=1,size=LL, face="bold"),panel.border = element_rect(colour = BASIC_COL,  size=Si),axis.text.y = element_text(size=LL, face="bold")) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)+scale_x_continuous(breaks = c( L1,L3,L4 ))+facet_zoom(ylim = c(0, S3), zoom.data = ifelse(a <= S2, NA, FALSE))
+  
+F3<- ggplot(GN5a) + geom_line(aes(XLA,Normalized_Tag_Count, colour=ID),size=2) +scale_color_manual(name=GR1,values=CO22S)+   theme_bw() +    theme(strip.placement = "outside",strip.text.y.left = element_text(angle=0),axis.text.x=element_text(angle = 45,h=1,size=LL, face="bold"),panel.border = element_rect(colour = BASIC_COL,  size=Si),axis.text.y = element_text(size=LL, face="bold")) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)+scale_x_continuous(breaks = seq(L1, L4, by = 3999)) +scale_y_continuous(limits = c(0, S4), breaks = seq(0, S4, by = S4/2))
+
+arrange6a <- ggarrange(F1, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+arrange6a2 <- ggarrange(F2, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+pdf(file=paste(PTHA,"00", "_",PROJECT,"Hockey_stick_plot", ".pdf", sep=""),width=5, height=4)  
+print(arrange6a)
+print(arrange6a2)
+dev.off()
+write.xlsx(GN5a,file=paste(PORT,"00", "_",PROJECT, "_fHockey_plot_MAT.xlsx",sep=""),overwrite = T)
+```
+
+```{r,fig.dim = c(4, 3),class.source="bg-info"}
+print(arrange6a)
+print(arrange6a2)
+```
+
+
+## Calculate P-value of the enrichment of the H3K27ac Mir9-LOF vs Ctr in SE and TYE
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+mat_RPKM1_5_c<- subset(GN5a,ENH4=="01SE")
+P11t2CH<-  ggplot(mat_RPKM1_5_c) + geom_line(aes(XLA,(Normalized_Tag_Count), colour=ID),size=2) +  scale_color_manual(name=GR1,values=CO22S)+ theme_bw() +  theme(strip.placement = "outside",strip.text.y.left = element_text(angle=0),axis.text.x=element_text(angle = 0,size=LL, face="bold"),panel.border = element_rect(colour = BASIC_COL,  size=Si),axis.text.y = element_text(size=LL, face="bold")) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)+scale_x_continuous(breaks = c( L1,L3,L4 ))
+
+stat.test5 <- mat_RPKM1_5_c %>%
+  wilcox_test(Normalized_Tag_Count ~ ID) %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_significance("p.adj")
+
+stat.test5 <- stat.test5 %>%
+  add_xy_position(x = "Sample", dodge = 0.8)
+YPOS5<- as.numeric((stat.test5$y.position )/3)
+SI=10  
+stat.test6<- stat.test5
+stat.test6$log10p<- log10(stat.test6$p)*(-1)
+stat.test6$log10fdr<- log10(stat.test6$p.adj)*(-1)
+stat.test6$CELL<- paste(stat.test6$DE2,stat.test6$group1,stat.test6$group2,sep="_")
+write.xlsx(stat.test6,file=paste(PORT,"00", "_",PROJECT, "_Pvalues.xlsx",sep=""),overwrite = T)
+```
+
+
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+phu <-ggplot(GN5a,aes(x=log10(RO_size),fill = ID)) + geom_density(alpha=0.3)+scale_fill_manual(values=c("darkgrey","darkgreen"))+ theme_bw()+facet_wrap(~ENH4, ncol = 2,strip.position="top",scales="free")+ labs(title=paste(PROJECT))
+
+pdf(file=paste(PTHA,"01_", PROJECT,"_DENSY_by_ENH.pdf", sep=""),width=5, height=4)  
+print(phu)
+dev.off()
+```
+
+## Density plot of Enhancer size from H3K27ac in Ctr and Mir9-LOF
+```{r,fig.dim = c(6, 4),class.source="bg-info"}
+arrange6phua <- ggarrange(phu, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+print(arrange6phua)
+```
+
+# How to clasify the SE and TYE in borad, medium and narrow from Ctr and Mir9-LOF
+```{r,class.source="bg-info",echo=T,warning=FALSE}
+GN5a$length<- GN5a$RO_size
+MAR_TOTAL<- list()
+GN5e1b<- list()
+NAME_SA<- plyr::count(GN5ano_u1,c("Sample"))
+NAME_BRO<- plyr::count(GN5ano_u1,c("ENH4"))
+  for(B in 1:length(NAME_BRO$ENH4)) {
+    BRO<- as.character(NAME_BRO[B,1])
+    CC<- paste(BRO,sep="_")
+#    print(CC)
+GN5e1b[[CC]]<- subset(GN5a, ENH4==BRO)
+FIL<- data.matrix(summary(GN5e1b[[CC]]$length))
+FIL2<-as.numeric(round(FIL[2,1],digits = 1))
+############ select the peak Wide from each data 
+FIL5<-as.numeric(round(FIL[5,1],digits = 1))
+FIL3<-as.numeric(round(FIL[3,1],digits = 1))
+FIL5b<-as.numeric(round(FIL5/1000,digits = 1))
+FIL3b<-as.numeric(round(FIL3/1000,digits = 1))
+GN5e1b[[CC]]$CLU[GN5e1b[[CC]]$length >=FIL5] <- paste("01WID",">",FIL5b,"kb",sep=" ")
+GN5e1b[[CC]]$CLU[GN5e1b[[CC]]$length <FIL5 & GN5e1b[[CC]]$length>= FIL3 ] <- paste("02ME_","<",FIL5b,"kb",">",FIL3b,"kb",sep="")
+GN5e1b[[CC]]$CLU[GN5e1b[[CC]]$length < FIL3] <- paste("03SMAL_","<",FIL3b,"kb",sep="")
+GN5e1b[[CC]]$CLU2[GN5e1b[[CC]]$length >=FIL5] <- "01WID"
+GN5e1b[[CC]]$CLU2[GN5e1b[[CC]]$length <FIL5 & GN5e1b[[CC]]$length>= FIL3 ] <- "02ME"
+GN5e1b[[CC]]$CLU2[GN5e1b[[CC]]$length < FIL3] <- "03SMAL"
+} 
+MI=6
+COL<- "black" 
+GN5e1b_WIDE<- do.call(rbind, GN5e1b)
+```
+
+### Export matrix files
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+write.xlsx(GN5e1b_WIDE,file=paste(PORT,"01", "_",PROJECT, "_Barplot_MAT.xlsx",sep=""),overwrite = T)
+MA6_WIDE<- plyr::count(GN5e1b_WIDE,c( "ENH4","Sample","CLU2","CLU"))
+write.table(GN5e1b_WIDE,file=paste(PTHA,PROJECT,"_wWIDE_n_TITLE.bed",sep=""),sep="\t",row.names = F,col.names=F,dec=".",quote = F)
+MA6_WIDE$CELL<- "MLg"
+```
+
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+NAME33b<- c( "01c","02Lof")
+NAME13b<- NAME33b
+YL_EXP2="Zscore"
+YL<- "Peak distribution (%)"
+YL2<- "N of Peaks"
+XL=" "
+YL_EXP="Log2(meanRPKM+1)"
+IP="H3k27ac"
+YL_EXP2="Zscore"
+LE=14
+SI=14
+BASIC_COL="black"
+PEAK="Peak group"
+CO22P<- c('mediumaquamarine','#FFB5C2','#E5E5E5')
+p11 <- ggplot(MA6_WIDE, aes(factor(Sample), freq, fill = factor(CLU2)))+ geom_bar(position = "fill",stat = "identity") +guides(fill = guide_legend(reverse = F)) +  labs(fill = PEAK)+ theme_bw()+facet_wrap(~ENH4, ncol = 2,strip.position="top",scales="fixed")+   scale_fill_manual(values =CO22P) + theme(strip.placement = "outside",strip.text.y.left = element_text(angle=0),axis.text.x=element_text(angle = 0,size=SI , face="bold"),axis.text.y=element_text(angle =0,size=SI , face="bold"), panel.border = element_rect(colour = BASIC_COL,  size=2)) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL)+ scale_y_continuous(breaks=seq(0,25,0.5))
+
+#print(p11)
+
+b11 <- ggplot(MA6_WIDE, aes(factor(Sample), freq, fill = factor(CLU2))) + geom_bar(position = "stack",stat = "identity") +  guides(fill = guide_legend(reverse = F)) +labs(fill = PEAK) + theme_bw()+facet_wrap(~CELL+ENH4, ncol =2,strip.position="top",scales="free")+   scale_fill_manual(values =CO22P) + theme(strip.placement = "outside",strip.text.y.left=element_text(angle=0),axis.text.x=element_text(angle = 0,size=SI ,face="bold"),axis.text.y=element_text(angle = 0,size=SI , face="bold"), panel.border = element_rect(colour = BASIC_COL,  size=2)) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)
+
+b112 <- ggplot(MA6_WIDE, aes(factor(Sample), freq, fill = factor(Sample))) +       geom_bar(position = "stack",stat = "identity") +  guides(fill = guide_legend(reverse = F)) +labs(fill = PEAK) +   theme_bw()+facet_wrap(~CELL+ENH4, ncol =2,strip.position="top",scales="free")+   scale_fill_manual(values =CO22S) + theme(strip.placement = "outside",strip.text.y.left=element_text(angle=0),axis.text.x=element_text(angle = 0,size=SI ,face="bold"),axis.text.y=element_text(angle = 0,size=SI , face="bold"), panel.border = element_rect(colour = BASIC_COL,  size=2)) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)
+#print(b11)
+#print(b112)
+TY1="01MLg_"
+arrange6a1 <- ggarrange(p11, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+arrange6a2 <- ggarrange(b11, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+arrange6a22 <- ggarrange(b112, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+
+b11212 <- ggplot(MA6_WIDE, aes(factor(Sample), freq, fill = factor(Sample))) +       geom_bar(position = "stack",stat = "identity") +  guides(fill = guide_legend(reverse = F)) +labs(fill = PEAK) +   theme_bw()+facet_wrap(~CELL, ncol =1,strip.position="top",scales="free")+   scale_fill_manual(values =CO22S) + theme(strip.placement = "outside",strip.text.y.left =element_text(angle=0),axis.text.x=element_text(angle = 0,size=SI ,face="bold"),axis.text.y=element_text(angle = 0,size=SI , face="bold"), panel.border = element_rect(colour = BASIC_COL,  size=2)) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)
+
+arrange6a222 <- ggarrange(b11212, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
+```
+
+
+## Print the pdf from barplots
+```{r,class.source="bg-info",echo=F,warning=FALSE}
+pdf(file=paste(PTHA,"01", "_", PROJECT,"WID_SE_TYE", ".pdf", sep=""),width=5, height=4)  
+print(arrange6a1)
+print(arrange6a2)
+print(arrange6a22)
+dev.off()
+
+pdf(file=paste(PTHA,"01", "_", PROJECT,".pdf", sep=""),width=3, height=3)  
+print(arrange6a222)
+dev.off()
+```
+
+# Perform Barplot for the SE and TYE Size
+```{r,fig.dim = c(5, 4),class.source="bg-info"}
+print(arrange6a2)
+print(arrange6a1)
+```
+
+
+## Create the Matrix of Percentage for MLg to calculate the Fisher`s Exact test
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+TT<- sum(MA6_WIDE$freq)
+MA6_WIDE$ENH_WIDE<- paste(MA6_WIDE$Sample,MA6_WIDE$ENH4,sep="_")
+NAME_GE<- data.frame(table(MA6_WIDE$ENH_WIDE))
+NAME_SA<- data.frame(table(MA6_WIDE$Sample))
+
+df.list3<- list()
+for(i in 1:length(NAME_GE$Freq)) {
+for(A in 1:length(NAME_SA$Freq)) {
+  GENO<- as.character(NAME_GE[i,1])
+   SA<- as.character(NAME_SA[A,1])
+   CC<- paste(GENO,SA,sep="_")
+#   print(CC)
+df.list3[[CC]] <- subset(MA6_WIDE, ENH_WIDE==GENO &Sample==SA)
+TT<- sum(df.list3[[CC]]$freq)
+df.list3[[CC]]$PER<- c(df.list3[[CC]]$freq*100)/TT
+}
+}
+GN5_fish<- do.call(rbind, df.list3)
+```
+
+## Perform Fisher`s Exact test and ChiP square test from the percentage 
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+TY1="01MLg_"
+NAME_TEST<- c("freq","noCO2")
+NAME_TEST_PER<- c("PER","noCO")
+NAME_BRO<- data.frame(table(MA6_WIDE$CLU2))
+NAME_ENH4<- data.frame(table(MA6_WIDE$ENH4))
+
+MAR<- list()
+MAT_for_TEST<- list()
+i=1
+B=1
+for(i in 1:length(NAME_ENH4$Var1)) {
+  for(B in 1:length(NAME_BRO$Var1)) {
+  ENH<- as.character(NAME_ENH4[i,1])
+   BRO<- as.character(NAME_BRO[B,1])
+   CC<- paste(ENH,BRO,sep="_")
+ #  print(CC)
+MAT_for_fish <- subset(GN5_fish, ENH4==ENH & CLU2==BRO )
+MAT_for_fish$noCO<- 100-MAT_for_fish$PER
+SM<- sum(MAT_for_fish$freq)
+MAT_for_fish$noCO2<- SM-MAT_for_fish$freq
+MAT_for_TEST[[CC]]<- MAT_for_fish[1:2,NAME_TEST_PER]
+MAT_for_TEST[[CC]]$COMBI<- CC
+PVA_fisher<- fisher.test(MAT_for_TEST[[CC]][1:2])
+PVA_chip<- chisq.test(MAT_for_TEST[[CC]][1:2])
+MAR[[CC]]<- data.frame(PVA_fisher$p.value)
+MAR[[CC]]$AREA<- CC
+MAR[[CC]]$Sam<- "Ctr_vs_Mir9_LOF"
+MAR[[CC]]$method<- "Fisher_Exact_test"
+MAR[[CC]]$log10P<- log10(MAR[[CC]][,1])*(-1)
+MAR[[CC]]$pval_chisqtest<- PVA_chip$p.value
+MAR[[CC]]$method2<- "chisqtest"
+MAR[[CC]]$log10Pfisher<- log10(MAR[[CC]][,1])*(-1)
+MAR[[CC]]$log10PChip<- log10(MAR[[CC]][,1])*(-1)
+}
+}
+GN5_fishMATR<- do.call(rbind, MAR)
+GN5_fishMATR_MATX<- do.call(rbind, MAT_for_TEST)
+GN5_fishMATR_MATX$SAM_COM<- rownames(GN5_fishMATR_MATX)
+fdrs<-p.adjust(GN5_fishMATR$PVA_fisher.p.value, method="BH")
+
+```
+
+### Export matrixes from Barplot
+
+```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
+write.xlsx(GN5_fishMATR,file=paste(PTHA,"01", "_", PROJECT,"Pva_bar_PER",".xlsx", sep=""),rowNames=F,overwrite = T)
+write.table(GN5_fishMATR,file=paste(PTHA,"01", "_",  PROJECT,"Pva_bar_PER",".txt", sep=""),sep="\t",row.names = F,col.names=T,dec=".",quote = F)
+write.xlsx(GN5_fishMATR_MATX,file=paste(PTHA,"01", "_",  PROJECT,"Pva_bar_PER_MAT_FIG",".xlsx", sep=""),rowNames=F,overwrite = T)
+```
+
