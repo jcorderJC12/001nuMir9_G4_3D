@@ -89,7 +89,7 @@ mat_m22$Sample<- paste(G4[,2],G4[,3],sep="_")
 ```
 
 
-## Load annotated peaks from H3k27ac 
+## Load annotated peaks from H3k27ac <br />
 ```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
 WORK2="../00INPUT/"
 mat_m1b1 = data.frame(list.files(path=paste(WORK2,sep=""), pattern="*_aROSE_anno.bed", full.names=T))
@@ -118,7 +118,7 @@ write.table(GN5ano,file=paste(PTHA,PROJECT,"_fromR.bed",sep=""),sep="\t",row.nam
 write.table(GN5ano,file=paste(PTHA,PROJECT,"_fromR_w_TITLE.txt",sep=""),sep="\t",row.names = F,col.names=T,dec=".",quote = F)
 ```
 
-## Prepare files to Print for IGV
+## Prepare files to Print for IGV<br />
 ```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
 NAME_GBro2<- plyr::count(GN5ano,c("Sample"))
 NAME_GBro3<- plyr::count(GN5ano,c("ENH4"))
@@ -140,7 +140,7 @@ GN5ano_u1 <-GN5ano[!duplicated(GN5ano[,c("ID_RO","Sample")]),]
 MA6<- plyr::count(GN5ano_u1,c("Sample","ENH4"))
 ```
 
-## Prepare the matrix to perform the Hockey stick plot
+## Prepare the matrix to perform the Hockey stick plot<br />
 ```{r,class.source="bg-info",echo=TRUE,warning=FALSE}
 NAME_SA<- plyr::count(GN5ano_u1,c("Sample"))
 
@@ -201,7 +201,7 @@ print(arrange6a2)
 ```
 
 
-## Calculate P-value of the enrichment of the H3K27ac Mir9-LOF vs Ctr in SE and TYE
+## Calculate P-value of the enrichment of the H3K27ac Mir9-LOF vs Ctr in SE and TYE<br />
 ```{r,class.source="bg-info",echo=F,warning=FALSE}
 mat_RPKM1_5_c<- subset(GN5a,ENH4=="01SE")
 P11t2CH<-  ggplot(mat_RPKM1_5_c) + geom_line(aes(XLA,(Normalized_Tag_Count), colour=ID),size=2) +  scale_color_manual(name=GR1,values=CO22S)+ theme_bw() +  theme(strip.placement = "outside",strip.text.y.left = element_text(angle=0),axis.text.x=element_text(angle = 0,size=LL, face="bold"),panel.border = element_rect(colour = BASIC_COL,  size=Si),axis.text.y = element_text(size=LL, face="bold")) + labs(title=paste(PROJECT,sep="" ) , x=XL, y = YL2)+scale_x_continuous(breaks = c( L1,L3,L4 ))
@@ -231,13 +231,13 @@ print(phu)
 dev.off()
 ```
 
-## Density plot of Enhancer size from H3K27ac in Ctr and Mir9-LOF
+## Density plot of Enhancer size from H3K27ac in Ctr and Mir9-LOF<br />
 ```{r,fig.dim = c(6, 4),class.source="bg-info"}
 arrange6phua <- ggarrange(phu, ncol = 1,nrow =1,common.legend = T, align = c("hv"),legend="top")
 print(arrange6phua)
 ```
 
-# How to clasify the SE and TYE in borad, medium and narrow from Ctr and Mir9-LOF
+# How to clasify the SE and TYE in borad, medium and narrow from Ctr and Mir9-LOF<br />
 ```{r,class.source="bg-info",echo=T,warning=FALSE}
 GN5a$length<- GN5a$RO_size
 MAR_TOTAL<- list()
@@ -268,7 +268,7 @@ COL<- "black"
 GN5e1b_WIDE<- do.call(rbind, GN5e1b)
 ```
 
-### Export matrix files
+### Export matrix files<br />
 ```{r,class.source="bg-info",echo=F,warning=FALSE}
 write.xlsx(GN5e1b_WIDE,file=paste(PORT,"01", "_",PROJECT, "_Barplot_MAT.xlsx",sep=""),overwrite = T)
 MA6_WIDE<- plyr::count(GN5e1b_WIDE,c( "ENH4","Sample","CLU2","CLU"))
@@ -311,7 +311,7 @@ arrange6a222 <- ggarrange(b11212, ncol = 1,nrow =1,common.legend = T, align = c(
 ```
 
 
-## Print the pdf from barplots
+## Print the pdf from barplots<br />
 ```{r,class.source="bg-info",echo=F,warning=FALSE}
 pdf(file=paste(PTHA,"01", "_", PROJECT,"WID_SE_TYE", ".pdf", sep=""),width=5, height=4)  
 print(arrange6a1)
@@ -324,14 +324,14 @@ print(arrange6a222)
 dev.off()
 ```
 
-# Perform Barplot for the SE and TYE Size
+# Perform Barplot for the SE and TYE Size<br />
 ```{r,fig.dim = c(5, 4),class.source="bg-info"}
 print(arrange6a2)
 print(arrange6a1)
 ```
 
 
-## Create the Matrix of Percentage for MLg to calculate the Fisher`s Exact test
+## Create the Matrix of Percentage for MLg to calculate the Fisher`s Exact test<br />
 ```{r,message=FALSE,class.source="bg-info",warning=FALSE,echo=T}
 TT<- sum(MA6_WIDE$freq)
 MA6_WIDE$ENH_WIDE<- paste(MA6_WIDE$Sample,MA6_WIDE$ENH4,sep="_")
